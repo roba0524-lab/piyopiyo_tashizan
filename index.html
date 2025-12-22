@@ -19,29 +19,59 @@ html, body {
   width: 100%;
   height: 100%;
   background: #bfefff;
+  transition: background-color 0.8s ease;
 }
 
-/* UI */
+/* ===== UI ===== */
 #ui {
   position: absolute;
-  top: 10px;
+  top: 12px;
   width: 100%;
   text-align: center;
   z-index: 10;
 }
 
-#target { font-size: 24px; margin-bottom: 6px; }
-#sum { font-size: 20px; }
+#target-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#target-number {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 64px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#target-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+#sum {
+  margin-top: 6px;
+  font-size: 20px;
+  color: #1e3a8a;
+}
 
 #message {
   position: absolute;
   top: 40%;
   width: 100%;
   text-align: center;
-  font-size: 36px;
-  font-weight: bold;
+  font-size: 40px;
+  font-weight: 900;
   pointer-events: none;
   opacity: 0;
+  transition: opacity 0.4s ease;
 }
 
 /* ===== ひよこ ===== */
@@ -50,13 +80,11 @@ html, body {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: #fff34d; /* 明るい黄色 */
+  background: #fff86b; /* 明るい黄色 */
   cursor: pointer;
   user-select: none;
-  transform-origin: center;
 }
 
-/* 顔全体 */
 .face {
   position: absolute;
   top: 12px;
@@ -64,32 +92,26 @@ html, body {
   height: 30px;
 }
 
-/* 目：さらに15%小さく（約72%） */
 .eye {
   position: absolute;
-  width: 7.2px;
-  height: 11.5px;
+  width: 5px;
+  height: 8px;
   background: #000;
   border-radius: 50%;
-  top: 0;
 }
-.eye.left  { left: 20px; }
-.eye.right { right: 20px; }
+.eye.left  { left: 22px; }
+.eye.right { right: 22px; }
 
-/* くちばし */
 .beak {
   position: absolute;
-  top: 16px;
+  top: 15px;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 10px solid #f59e0b;
 }
 
-/* おなかの数字 */
 .number {
   position: absolute;
   bottom: 6px;
@@ -97,14 +119,13 @@ html, body {
   text-align: center;
   font-size: 24px;
   font-weight: bold;
-  color: #1e3a8a; /* 紺色 */
+  color: #1e3a8a;
 }
 
-/* アニメーション */
+/* ===== Effects ===== */
 .squash-x { animation: squashX 0.15s ease-out; }
 .squash-y { animation: squashY 0.15s ease-out; }
 .bump     { animation: bump 0.18s ease-out; }
-.explode  { animation: explode 0.35s ease-out; }
 
 .ripple {
   position: absolute;
@@ -119,24 +140,40 @@ html, body {
 
 .confetti {
   position: absolute;
-  width: 8px;
-  height: 12px;
-  animation: fall 1.4s linear forwards;
+  width: 10px;
+  height: 16px;
+  animation: confetti-fall 2.4s ease-out forwards;
 }
 
-@keyframes squashX { 50% { transform: scaleX(1.25) scaleY(0.8); } }
-@keyframes squashY { 50% { transform: scaleX(0.8) scaleY(1.25); } }
-@keyframes bump    { 50% { transform: scale(1.18); } }
-@keyframes explode {
-  0% { transform: scale(1); }
-  60% { transform: scale(1.6); }
-  100% { transform: scale(0); opacity: 0; }
+/* ===== Animations ===== */
+@keyframes squashX {
+  50% { transform: scaleX(1.25) scaleY(0.8); }
 }
+@keyframes squashY {
+  50% { transform: scaleX(0.8) scaleY(1.25); }
+}
+@keyframes bump {
+  50% { transform: scale(1.15); }
+}
+
 @keyframes ripple {
-  to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+  to {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
 }
-@keyframes fall {
-  to { transform: translateY(120vh) rotate(360deg); opacity: 0; }
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate(0, -20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform:
+      translate(calc(var(--dx) * 1px), 120vh)
+      rotate(720deg);
+    opacity: 0;
+  }
 }
 </style>
 </head>
@@ -144,7 +181,10 @@ html, body {
 <body>
 <div id="screen">
   <div id="ui">
-    <div id="target"></div>
+    <div id="target-wrap">
+      <div id="target-number"></div>
+      <div id="target-text">をつくろう</div>
+    </div>
     <div id="sum">いま：0</div>
   </div>
   <div id="message"></div>
@@ -152,12 +192,12 @@ html, body {
 
 <script>
 const screen = document.getElementById("screen");
-const targetEl = document.getElementById("target");
+const targetNumberEl = document.getElementById("target-number");
 const sumEl = document.getElementById("sum");
 const messageEl = document.getElementById("message");
 
 const SIZE = 70;
-const AREA_TOP = 120;
+const AREA_TOP = 150;
 
 let bubbles = [];
 let sum = 0;
@@ -176,13 +216,23 @@ function ripple(x,y){
   r.onanimationend=()=>r.remove();
 }
 
+function clearBubbles(){
+  bubbles.forEach(b=>b.el.remove());
+  bubbles=[];
+}
+
 function reset(){
-  screen.querySelectorAll(".bubble,.confetti").forEach(e=>e.remove());
-  bubbles=[]; sum=0; running=true;
+  screen.style.background="#bfefff";
+  clearBubbles();
+  sum=0;
+  running=true;
+
   messageEl.style.opacity=0;
+  sumEl.style.display="block";
   sumEl.textContent="いま：0";
+
   target=Math.floor(rand(10,31));
-  targetEl.textContent=`${target} に しよう！`;
+  targetNumberEl.textContent=target;
   create();
 }
 
@@ -199,72 +249,119 @@ function create(){
       <div class="number">${n}</div>`;
     screen.appendChild(el);
 
-    const b={el,n,x:rand(0,innerWidth-SIZE),y:rand(AREA_TOP,innerHeight-SIZE),
-      vx:rand(-1.2,1.2),vy:rand(-1.2,1.2),alive:true};
+    const b={
+      el,n,
+      x:rand(0,innerWidth-SIZE),
+      y:rand(AREA_TOP,innerHeight-SIZE),
+      vx:rand(-1.2,1.2),
+      vy:rand(-1.2,1.2),
+      alive:true
+    };
 
     el.onclick=e=>{
       if(!running||!b.alive)return;
       ripple(e.clientX,e.clientY);
-      b.alive=false; sum+=n;
+      b.alive=false;
+      sum+=n;
       sumEl.textContent=`いま：${sum}`;
       el.remove();
-      if(sum===target)success();
-      else if(sum>target)fail();
+
+      if(sum===target) success();
+      else if(sum>target) fail();
     };
+
     bubbles.push(b);
   });
 }
 
 function success(){
   running=false;
-  messageEl.textContent="やったね！";
+  screen.style.background="#ffffff";
+  clearBubbles();
+
+  sumEl.style.display="none";
+  messageEl.textContent="だいせいこう！！";
   messageEl.style.opacity=1;
-  for(let i=0;i<60;i++){
+
+  for(let i=0;i<220;i++){
     const c=document.createElement("div");
     c.className="confetti";
     c.style.left=rand(0,100)+"%";
-    c.style.background=`hsl(${rand(0,360)},80%,60%)`;
+    c.style.background=`hsl(${rand(0,360)},90%,60%)`;
+    c.style.setProperty("--dx", rand(-300,300));
     screen.appendChild(c);
   }
+
+  setTimeout(reset,3900);
 }
 
 function fail(){
   running=false;
-  messageEl.textContent="しっぱい(´・ω・`)";
+  screen.style.background="#ffffff";
+  clearBubbles();
+
+  sumEl.style.display="none";
+  messageEl.textContent="(´・ω・`)";
   messageEl.style.opacity=1;
-  bubbles.forEach(b=>b.el.classList.add("explode"));
-  setTimeout(reset,800);
+
+  setTimeout(reset,3900);
 }
 
 function loop(){
   bubbles.forEach(b=>{
     if(!b.alive)return;
-    b.x+=b.vx; b.y+=b.vy;
 
-    if(b.x<=0||b.x>=innerWidth-SIZE){b.vx*=-1;b.el.classList.add("squash-x");}
-    if(b.y<=AREA_TOP||b.y>=innerHeight-SIZE){b.vy*=-1;b.el.classList.add("squash-y");}
+    b.x+=b.vx;
+    b.y+=b.vy;
+
+    if(b.x<=0){
+      b.x=2;
+      b.vx=Math.abs(b.vx);
+      b.el.classList.add("squash-x");
+    }
+    if(b.x>=innerWidth-SIZE){
+      b.x=innerWidth-SIZE-2;
+      b.vx=-Math.abs(b.vx);
+      b.el.classList.add("squash-x");
+    }
+    if(b.y<=AREA_TOP){
+      b.y=AREA_TOP+2;
+      b.vy=Math.abs(b.vy);
+      b.el.classList.add("squash-y");
+    }
+    if(b.y>=innerHeight-SIZE){
+      b.y=innerHeight-SIZE-2;
+      b.vy=-Math.abs(b.vy);
+      b.el.classList.add("squash-y");
+    }
 
     bubbles.forEach(o=>{
       if(b===o||!o.alive)return;
-      const dx=o.x-b.x,dy=o.y-b.y,d=Math.hypot(dx,dy);
+      const dx=o.x-b.x,dy=o.y-b.y;
+      const d=Math.hypot(dx,dy);
       if(d<SIZE){
-        b.vx-=dx*0.008; b.vy-=dy*0.008;
-        o.vx+=dx*0.008; o.vy+=dy*0.008;
-        b.el.classList.add("bump"); o.el.classList.add("bump");
+        b.vx-=dx*0.008;
+        b.vy-=dy*0.008;
+        o.vx+=dx*0.008;
+        o.vy+=dy*0.008;
+        b.el.classList.add("bump");
+        o.el.classList.add("bump");
       }
     });
 
     b.el.style.left=b.x+"px";
     b.el.style.top=b.y+"px";
   });
+
   requestAnimationFrame(loop);
 }
 
 screen.onanimationend=e=>{
-  e.target.classList.remove("squash-x","squash-y","bump","explode");
+  e.target.classList.remove("squash-x","squash-y","bump");
 };
 
-reset(); loop();
+reset();
+loop();
 </script>
 </body>
 </html>
