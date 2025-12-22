@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>あわあわ足し算 ひよこ</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #bfefff;
+}
+
+/* UI */
+#ui {
+  position: absolute;
+  top: 10px;
+  width: 100%;
+  text-align: center;
+  z-index: 10;
+}
+
+#target { font-size: 24px; margin-bottom: 6px; }
+#sum { font-size: 20px; }
+
+#message {
+  position: absolute;
+  top: 40%;
+  width: 100%;
+  text-align: center;
+  font-size: 36px;
+  font-weight: bold;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* ===== ひよこ ===== */
+.bubble {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #fff34d; /* 明るい黄色 */
+  cursor: pointer;
+  user-select: none;
+  transform-origin: center;
+}
+
+/* 顔全体 */
+.face {
+  position: absolute;
+  top: 12px;
+  width: 100%;
+  height: 30px;
+}
+
+/* 目：さらに15%小さく（約72%） */
+.eye {
+  position: absolute;
+  width: 7.2px;
+  height: 11.5px;
+  background: #000;
+  border-radius: 50%;
+  top: 0;
+}
+.eye.left  { left: 20px; }
+.eye.right { right: 20px; }
+
+/* くちばし */
+.beak {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid #f59e0b;
+}
+
+/* おなかの数字 */
+.number {
+  position: absolute;
+  bottom: 6px;
+  width: 100%;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e3a8a; /* 紺色 */
+}
+
+/* アニメーション */
+.squash-x { animation: squashX 0.15s ease-out; }
+.squash-y { animation: squashY 0.15s ease-out; }
+.bump     { animation: bump 0.18s ease-out; }
+.explode  { animation: explode 0.35s ease-out; }
+
+.ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.8);
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.6s ease-out forwards;
+}
+
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  animation: fall 1.4s linear forwards;
+}
+
+@keyframes squashX { 50% { transform: scaleX(1.25) scaleY(0.8); } }
+@keyframes squashY { 50% { transform: scaleX(0.8) scaleY(1.25); } }
+@keyframes bump    { 50% { transform: scale(1.18); } }
+@keyframes explode {
+  0% { transform: scale(1); }
+  60% { transform: scale(1.6); }
+  100% { transform: scale(0); opacity: 0; }
+}
+@keyframes ripple {
+  to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+@keyframes fall {
+  to { transform: translateY(120vh) rotate(360deg); opacity: 0; }
+}
+</style>
+</head>
+
+<body>
+<div id="screen">
+  <div id="ui">
+    <div id="target"></div>
+    <div id="sum">いま：0</div>
+  </div>
+  <div id="message"></div>
+</div>
+
+<script>
+const screen = document.getElementById("screen");
+const targetEl = document.getElementById("target");
+const sumEl = document.getElementById("sum");
+const messageEl = document.getElementById("message");
+
+const SIZE = 70;
+const AREA_TOP = 120;
+
+let bubbles = [];
+let sum = 0;
+let target = 0;
+let running = true;
+
+const rand = (a,b)=>Math.random()*(b-a)+a;
+const shuffle = a => a.sort(()=>Math.random()-0.5);
+
+function ripple(x,y){
+  const r=document.createElement("div");
+  r.className="ripple";
+  r.style.left=x+"px";
+  r.style.top=y+"px";
+  screen.appendChild(r);
+  r.onanimationend=()=>r.remove();
+}
+
+function reset(){
+  screen.querySelectorAll(".bubble,.confetti").forEach(e=>e.remove());
+  bubbles=[]; sum=0; running=true;
+  messageEl.style.opacity=0;
+  sumEl.textContent="いま：0";
+  target=Math.floor(rand(10,31));
+  targetEl.textContent=`${target} に しよう！`;
+  create();
+}
+
+function create(){
+  shuffle([1,2,3,4,5,6,7,8,9]).forEach(n=>{
+    const el=document.createElement("div");
+    el.className="bubble";
+    el.innerHTML=`
+      <div class="face">
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="beak"></div>
+      </div>
+      <div class="number">${n}</div>`;
+    screen.appendChild(el);
+
+    const b={el,n,x:rand(0,innerWidth-SIZE),y:rand(AREA_TOP,innerHeight-SIZE),
+      vx:rand(-1.2,1.2),vy:rand(-1.2,1.2),alive:true};
+
+    el.onclick=e=>{
+      if(!running||!b.alive)return;
+      ripple(e.clientX,e.clientY);
+      b.alive=false; sum+=n;
+      sumEl.textContent=`いま：${sum}`;
+      el.remove();
+      if(sum===target)success();
+      else if(sum>target)fail();
+    };
+    bubbles.push(b);
+  });
+}
+
+function success(){
+  running=false;
+  messageEl.textContent="やったね！";
+  messageEl.style.opacity=1;
+  for(let i=0;i<60;i++){
+    const c=document.createElement("div");
+    c.className="confetti";
+    c.style.left=rand(0,100)+"%";
+    c.style.background=`hsl(${rand(0,360)},80%,60%)`;
+    screen.appendChild(c);
+  }
+}
+
+function fail(){
+  running=false;
+  messageEl.textContent="しっぱい(´・ω・`)";
+  messageEl.style.opacity=1;
+  bubbles.forEach(b=>b.el.classList.add("explode"));
+  setTimeout(reset,800);
+}
+
+function loop(){
+  bubbles.forEach(b=>{
+    if(!b.alive)return;
+    b.x+=b.vx; b.y+=b.vy;
+
+    if(b.x<=0||b.x>=innerWidth-SIZE){b.vx*=-1;b.el.classList.add("squash-x");}
+    if(b.y<=AREA_TOP||b.y>=innerHeight-SIZE){b.vy*=-1;b.el.classList.add("squash-y");}
+
+    bubbles.forEach(o=>{
+      if(b===o||!o.alive)return;
+      const dx=o.x-b.x,dy=o.y-b.y,d=Math.hypot(dx,dy);
+      if(d<SIZE){
+        b.vx-=dx*0.008; b.vy-=dy*0.008;
+        o.vx+=dx*0.008; o.vy+=dy*0.008;
+        b.el.classList.add("bump"); o.el.classList.add("bump");
+      }
+    });
+
+    b.el.style.left=b.x+"px";
+    b.el.style.top=b.y+"px";
+  });
+  requestAnimationFrame(loop);
+}
+
+screen.onanimationend=e=>{
+  e.target.classList.remove("squash-x","squash-y","bump","explode");
+};
+
+reset(); loop();
+</script>
+</body>
+</html>
