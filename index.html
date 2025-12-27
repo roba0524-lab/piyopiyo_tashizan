@@ -177,11 +177,11 @@ const SIZE = 70;
 const R = SIZE / 2;
 
 let AREA_TOP = 160;
-
 let bubbles = [];
 let sum = 0;
 let target = 0;
 let running = true;
+let clearCount = 0;
 
 const rand = (a,b)=>Math.random()*(b-a)+a;
 
@@ -244,14 +244,7 @@ function create(){
     inner.style.animationDuration=rand(20,40)+"s";
 
     const pos=findSafePos();
-    const b={
-      el,n,
-      x:pos.x,
-      y:pos.y,
-      vx:rand(-1.4,1.4),
-      vy:rand(-1.4,1.4),
-      alive:true
-    };
+    const b={ el,n, x:pos.x, y:pos.y, vx:rand(-1.4,1.4), vy:rand(-1.4,1.4), alive:true };
 
     el.onclick=()=>{
       if(!running||!b.alive)return;
@@ -259,8 +252,8 @@ function create(){
       sum+=n;
       sumEl.textContent=`いま：${sum}`;
       el.remove();
-      if(sum===target)success();
-      else if(sum>target)fail();
+      if(sum===target) success();
+      else if(sum>target) fail();
     };
 
     bubbles.push(b);
@@ -270,6 +263,8 @@ function create(){
 /* ===== 成功 ===== */
 function success(){
   running=false;
+  clearCount++;
+
   bubbles.forEach(b=>b.el.remove());
   bubbles=[];
   sumEl.style.display="none";
@@ -278,66 +273,115 @@ function success(){
   messageEl.textContent="だいせいこう！！";
   messageEl.style.opacity=1;
 
-  playClearChick();
+  playClearChicks(clearCount);
   launchConfetti();
-  setTimeout(reset,3500);
+
+  setTimeout(reset,4000);
 }
 
 /* ===== 失敗 ===== */
 function fail(){
   running=false;
+  clearCount=0;
+
   bubbles.forEach(b=>b.el.remove());
   bubbles=[];
   sumEl.style.display="none";
+
   messageEl.textContent="(´・ω・`)";
   messageEl.style.opacity=1;
   setTimeout(reset,3000);
 }
 
-/* ===== クリアひよこ（右→ジャンプ→左） ===== */
-function playClearChick(){
-  const chick=document.createElement("div");
-  chick.className="clear-chick";
-  chick.style.left="50%";
-  chick.style.top="55%";
-  chick.style.transform="translate(120vw,0)";
-  chick.innerHTML=`
-    <div class="face">
-      <div class="eye left"></div>
-      <div class="eye right"></div>
-      <div class="beak"></div>
-    </div>`;
-  clearLayer.appendChild(chick);
+/* ===== クリア演出 ===== */
+function playClearChicks(count){
+  const n = Math.min(count,4);
+  const centerY = innerHeight * 0.55;
+  const spacing = 90;
+  const startX = innerWidth/2 - (n-1)*spacing/2;
+  const chicks = [];
 
-  chick.animate(
-    [{transform:"translate(120vw,0)"},{transform:"translate(-50%,0)"}],
-    {duration:400,easing:"ease-out",fill:"forwards"}
-  );
+  for(let i=0;i<n;i++){
+    const c=document.createElement("div");
+    c.className="clear-chick";
+    c.style.left=startX+i*spacing+"px";
+    c.style.top=centerY+"px";
+    c.style.transform="translateX(120vw)";
+    c.innerHTML=`
+      <div class="face">
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="beak"></div>
+      </div>`;
+    clearLayer.appendChild(c);
+    chicks.push(c);
 
-  [-40,-65,-50].forEach((h,i)=>{
-    setTimeout(()=>{
-      chick.animate(
-        [
-          {transform:"translate(-50%,0)"},
-          {transform:`translate(-50%,${h}px)`},
-          {transform:"translate(-50%,0)"}
-        ],
-        {duration:300,easing:"ease-out"}
-      );
-    },500+i*400);
-  });
-
-  setTimeout(()=>{
-    chick.animate(
-      [{transform:"translate(-50%,0)"},{transform:"translate(-120vw,0)"}],
-      {duration:400,easing:"ease-in",fill:"forwards"}
+    c.animate(
+      [{transform:"translateX(120vw)"},{transform:"translateX(0)"}],
+      {duration:500,easing:"ease-out",fill:"forwards",delay:i*80}
     );
-  },1800);
+  }
+
+  /* ジャンプ */
+  setTimeout(()=>{
+    chicks.forEach((c,i)=>{
+      c.animate(
+        [
+          {transform:"translateY(0)"},
+          {transform:"translateY(-60px)"},
+          {transform:"translateY(0)"}
+        ],
+        {duration:400,easing:"ease-out",delay:i*80}
+      );
+    });
+  },700);
+
+  /* 4回目：ぼよよよーーん → 四散 */
+  if(count>=4){
+    setTimeout(()=>{
+      chicks.forEach(c=>{
+        c.animate(
+          [
+            {transform:"scale(1)"},
+            {transform:"scale(1.4)"},
+            {transform:"scale(0.9)"},
+            {transform:"scale(1.2)"},
+            {transform:"scale(1)"}
+          ],
+          {duration:900,easing:"ease-out"}
+        );
+      });
+    },1200);
+
+    setTimeout(()=>{
+      chicks.forEach(c=>{
+        c.animate(
+          [
+            {transform:"translate(0,0) scale(1)"},
+            {transform:`translate(${rand(-300,300)}px,${rand(-300,300)}px) scale(0)`}
+          ],
+          {duration:700,easing:"ease-in",fill:"forwards"}
+        );
+      });
+    },2200);
+
+    return;
+  }
+
+  /* 1〜3回目：左へ退場 */
+  setTimeout(()=>{
+    chicks.forEach((c,i)=>{
+      c.animate(
+        [{transform:"translateX(0)"},{transform:"translateX(-120vw)"}],
+        {duration:500,easing:"ease-in",fill:"forwards",delay:i*80}
+      );
+    });
+  },1600);
 }
 
 /* ===== 紙吹雪 ===== */
 function launchConfetti(){
-  for(let i=0;i<20;i++){
+  for(let i=0;i<25;i++){
     const c=document.createElement("div");
     c.className="confetti";
     c.style.left=rand(0,innerWidth)+"px";
@@ -372,7 +416,6 @@ function loop(){
       }
     }
 
-    /* 最終クランプ（重要） */
     b.x=Math.max(0,Math.min(innerWidth-SIZE,b.x));
     b.y=Math.max(AREA_TOP,Math.min(innerHeight-SIZE,b.y));
 
